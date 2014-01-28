@@ -17,12 +17,10 @@
 
 import httplib
 import os
-import re
-
 import requests
-
 import errors
 import utils
+
 
 __author__ = 'pavel'
 __all__ = ['Oozie']
@@ -57,22 +55,6 @@ class JobAction:
 JobsEndPoint = 'jobs'
 JobEndPoint = 'job'
 
-
-def _format_error(description, exception):
-    """
-    format an error message from responses taken from the server
-    :type description: basestring
-    :param description: The error description taken from the server's response
-    :type exception: basestring
-    :param exception: The exception string taken from the server's response
-    :rtype : basestring
-    """
-    if exception:
-        return "%s: %s" % (description, exception)
-    else:
-        return description
-
-
 class Oozie(object):
     """
     Oozie is a python warper for the oozie REST api
@@ -81,8 +63,7 @@ class Oozie(object):
     DEFAULT_JOB_TRACKER = r'localhost:8021'
     DEFAULT_OOZIE_LIBPATH = r'/user/oozie/share/lib/pig'
     DEFAULT_USER_NAME = 'hdfs'
-    _EXCEPTION_PATTERN = re.compile(r"<b>exception</b> <pre>(.*)")
-    _DESCRIPTION_PATTERN = re.compile(r"<b>description</b> <u>(.*)</u>")
+
 
     def __init__(self, hostname='localhost', port=11000):
         """
@@ -129,9 +110,7 @@ class Oozie(object):
         headers = {'Content-Type': 'application/xml;charset=UTF-8'}
         response = requests.post(self.base_uri + JobsEndPoint, headers=headers, data=config)
         if response.status_code != httplib.CREATED:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
         else:
             return response.json()['id']
 
@@ -192,9 +171,7 @@ class Oozie(object):
         headers = {'Content-Type': 'application/xml;charset=UTF-8'}
         response = requests.post(self.base_uri + JobsEndPoint, params={'jobtype': 'hive'}, headers=headers, data=config)
         if response.status_code != httplib.CREATED:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
         else:
             return response.json()['id']
 
@@ -253,9 +230,7 @@ class Oozie(object):
         headers = {'Content-Type': 'application/xml;charset=UTF-8'}
         response = requests.post(self.base_uri + JobsEndPoint, params={'jobtype': 'pig'}, headers=headers, data=config)
         if response.status_code != httplib.CREATED:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
         else:
             return response.json()['id']
 
@@ -281,9 +256,7 @@ class Oozie(object):
             response = requests.put(self.base_uri + JobEndPoint + "/" + job_id, params={'action': action})
 
         if response.status_code != httplib.OK:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
 
     def get_job_information(self, job_id, timezone='GMT'):
         """
@@ -303,9 +276,7 @@ class Oozie(object):
         elif response.status_code == httplib.BAD_REQUEST:
             raise ValueError('%s is a bad job id' % job_id)
         else:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
 
     def get_job_definition(self, job_id):
         """
@@ -323,9 +294,7 @@ class Oozie(object):
         elif response.status_code == httplib.BAD_REQUEST:
             raise ValueError('%s is a bad job id' % job_id)
         else:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
 
     def get_job_log(self, job_id):
         """
@@ -343,9 +312,7 @@ class Oozie(object):
         elif response.status_code == httplib.BAD_REQUEST:
             raise ValueError('%s is a bad job id' % job_id)
         else:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
 
     def get_all_jobs_information(self, timezone='GMT'):
         """
@@ -360,9 +327,7 @@ class Oozie(object):
         if response.status_code == httplib.OK:
             return response.json['jobs']
         else:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
 
     def _get_system_status(self):
         response = requests.get(self.base_uri + AdminEndPoint.SYSTEM_STATUS)
@@ -373,9 +338,7 @@ class Oozie(object):
             raise ValueError('%s is not a legall status' % status)
         response = requests.put(self.base_uri + AdminEndPoint.SYSTEM_STATUS, params={'systemmode': status})
         if response.status_code != httplib.OK:
-            error_description = self._get_error_description_from_response_content(response.content)
-            error_exception = self._get_error_exception_from_response_content(response.content)
-            raise errors.OozieError(_format_error(error_description, error_exception))
+            raise errors.OozieError(errors.error_message_from_response(response))
 
     @property
     def os_env(self):
@@ -425,26 +388,7 @@ class Oozie(object):
         """
         return requests.get(self.base_uri + AdminEndPoint.TIME_ZONES).json()['available-timezones']
 
-    def _get_error_description_from_response_content(self, content):
-        """
-        Parses the oozie server response on error to get the description of the error
 
-        :type content: basestring
-        :param content: html page of repsonse (taken from repsonse.content)
-        :return: error description string 
-        :rtype : basestring
-        """
-        return self._DESCRIPTION_PATTERN.findall(content)[0]
-
-    def _get_error_exception_from_response_content(self, content):
-        """
-        Parses the oozie server response on error to get the exception
-        :type content: basestring
-        :param content: html page of repsonse (taken from repsonse.content)
-        :rtype : basestring
-        :return: error exception
-        """
-        return self._EXCEPTION_PATTERN.findall(content)[0]
 
     system_status = property(_get_system_status, _set_system_status, None,
                              "Oozie system status. NORMAL, NOWEBSERVICE, or SAFEMODE")
