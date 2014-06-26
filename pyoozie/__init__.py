@@ -17,6 +17,8 @@
 
 import errors
 import utils
+import workflow
 from oozie import Oozie
+
 __author__ = 'pavel'
 __all__ = ['Oozie']
